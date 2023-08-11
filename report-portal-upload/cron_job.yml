@@ -39,7 +39,7 @@ spec:
             - name: SLACK_CHANNEL_ID
               value: "C05L479BFND"
             - name: PY_XML_UPDATE_SCRIPT
-              value: https://raw.githubusercontent.com/redhat-hac-qe/ci-scripts/main/rp_xml_update_and_zip.py
+              value: https://raw.githubusercontent.com/The-Anton/ci-scripts/main/report-portal-upload/xml_update_and_zip.py
             - name: DEV_CONSOLE_REPORT_IMPORT_URL
               value: https://reportportal-openshift-dev-console.apps.ocp-c1.prod.psi.redhat.com/api/v1/console/launch/import
             - name: JOB_URL
