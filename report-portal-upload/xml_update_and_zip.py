@@ -9,21 +9,11 @@ def update_xml_file(xml_file):
     root = tree.getroot()
 
     testsuites = root.findall('testsuite')
-    if 'file' in testsuites[0].attrib and testsuites[0].attrib['failures'] != "0":
-        return
-    elif 'file' in testsuites[0].attrib:
-        root.remove(testsuites[0])
-
 
     for testsuite in testsuites:
         if len(list(testsuite)) == 0:
+            print(testsuite.attrib['name'])
             root.remove(testsuite)
-
-
-    parent_testsuite = testsuites[1]
-    for testsuite in testsuites[2:]:
-        parent_testsuite.append(testsuite)
-        root.remove(testsuite)
 
     tree.write(xml_file, encoding='utf-8', xml_declaration=True)
 
