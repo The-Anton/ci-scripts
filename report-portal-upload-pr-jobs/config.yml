@@ -1,0 +1,27 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: reportportal-upload-config
+  namespace: appstudio-qe
+data:
+  openshiftcijob.url: >-
+    https://gcsweb-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/origin-ci-test/logs/periodic-ci-redhat-appstudio-infra-deployments-main-appstudio-e2e-tests-periodic/
+  reportportal.url: 'https://reportportal-appstudio-qe.apps.ocp-c1.prod.psi.redhat.com/'                                        //okay
+  openshiftcijob.pr.infra-deployments.job: /pull-ci-redhat-appstudio-infra-deployments-main-appstudio-e2e-tests/
+  openshiftcijob.pr.infra-deployments.gs: 'gs://origin-ci-test/pr-logs/pull/redhat-appstudio_infra-deployments/'
+  openshiftcijob.pr.e2e-tests.gs: 'gs://origin-ci-test/pr-logs/pull/redhat-appstudio_e2e-tests/'
+  openshiftcijob.pr.infra-deployments.artifacts.path: /artifacts/appstudio-e2e-tests/redhat-appstudio-e2e/artifacts/
+  smeetarget.url: 'http://el-upload-artifacts-listener.appstudio-qe.svc.cluster.local:8080'
+  openshiftcijob.pr.e2e-tests.url: >-
+    https://gcsweb-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/origin-ci-test/pr-logs/pull/redhat-appstudio_e2e-tests/
+  openshiftcijob.pr.e2e-tests.artifacts.path: /artifacts/redhat-appstudio-e2e/redhat-appstudio-e2e/artifacts/
+  artifacts.path: /artifacts/appstudio-e2e-tests-periodic/redhat-appstudio-e2e/artifacts/
+  openshiftcijob.pr.infra-deployments.url: >-
+    https://gcsweb-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/origin-ci-test/pr-logs/pull/redhat-appstudio_infra-deployments/
+  smeesource.url: 'https://smee.io/JgVqn2oYFPY1CF'
+  rp_preproc.url: 'http://reportportal-appstudio-qe-preproc.apps.ocp-c1.prod.psi.redhat.com/'
+  openshiftcijob.buildid: ''
+  openshiftcijob.gs: >-
+    gs://origin-ci-test/logs/periodic-ci-redhat-appstudio-infra-deployments-main-appstudio-e2e-tests-periodic/
+  openshiftcijob.latestbuild.filename: latest-build.txt
+  openshiftcijob.pr.e2e-tests.job: /pull-ci-redhat-appstudio-e2e-tests-main-redhat-appstudio-e2e/

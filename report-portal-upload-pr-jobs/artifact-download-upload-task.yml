@@ -1,0 +1,141 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: artifacts-download-upload-task
+  namespace: devconsole-qe-upload
+spec:
+  params:
+    - description: Repository URL
+      name: url
+      type: string
+    - description: PR pull number
+      name: pullNumber
+      type: string
+  steps:
+    - env:
+        - name: LATEST_BUILD_FILENAME
+          valueFrom:
+            configMapKeyRef:
+              key: openshiftcijob.latestbuild.filename
+              name: reportportal-upload-config-new
+        - name: OPENSHIFTCI_JOB_URL
+          valueFrom:
+            configMapKeyRef:
+              key: openshiftcijob.url
+              name: reportportal-upload-config-new
+        - name: OPENSHIFTCI_JOB_GS
+          valueFrom:
+            configMapKeyRef:
+              key: openshiftcijob.gs
+              name: reportportal-upload-config-new
+        - name: ARTIFACTS_PATH
+          valueFrom:
+            configMapKeyRef:
+              key: artifacts.path
+              name: reportportal-upload-config-new
+        - name: REPORTPORTAL_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: reportportal-token
+        - name: PY_XML_UPDATE_SCRIPT
+          value: >-
+            https://raw.githubusercontent.com/redhat-hac-qe/ci-scripts/main/rp_xml_update_and_zip.py
+        - name: DEV_CONSOLE_REPORT_IMPORT_URL
+          value: >-
+            https://reportportal-openshift-dev-console.apps.ocp-c1.prod.psi.redhat.com/api/v1/console/launch/import
+        - name: JOB_URL
+          value: >-
+            https://gcsweb-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/origin-ci-test/logs/periodic-ci-openshift-release-master-nightly-4.14-console-aws
+        - name: OPENSHIFTCI_JOB_GS
+          value: >-
+            gs://origin-ci-test/logs/periodic-ci-openshift-release-master-nightly-4.14-console-aws
+        - name: OPENSHIFTCI_JOB_ARTIFACTS_PATH
+          value: >-
+            artifacts/console-aws/e2e-test/artifacts/gui_test_screenshots/junit_cypress*.xml
+      image: 'registry.access.redhat.com/ubi9/ubi:latest'
+      name: get-url
+      resources: {}
+      script: |
+        #!/bin/sh
+        echo Repository URL:
+
+        echo $(params.url)
+
+        PROJECT=$(echo $(params.url) | sed 's|https://github.com/openshift/||')
+
+        echo Parsed project name from Repository URL:
+
+        echo $PROJECT
+        echo PR number:
+        echo $(params.pullNumber)
+        PR_NUMBER=$(params.pullNumber)
+
+        #Get Download URL
+
+        DOWNLOAD_URL=$OPENSHIFTCI_JOB_GS$PR_NUMBER$OPENSHIFTCI_JOB_URL
+
+        echo Download URL:
+
+        echo $DOWNLOAD_URL
+
+        #Get latest build
+
+        LATEST_BUILD_ID=$(curl "$JOB_URL/latest-build.txt")
+        echo "latest build id : $LATEST_BUILD_ID"
+
+        GSUTIL_URL=$DOWNLOAD_URL$LATEST_BUILD$ARTIFACTS
+
+        echo Download URL for gsutil:
+        echo $GSUTIL_URL
+
+        cd /tmp
+        mkdir ./artifacts
+
+        export CLOUDSDK_CONFIG=/tmp
+
+        if (gsutil -m -o "GSUtil:state_dir=/tmp" cp -r
+        "$OPENSHIFTCI_JOB_GS/$LATEST_BUILD_ID/$OPENSHIFTCI_JOB_ARTIFACTS_PATH"
+        artifacts); then
+          echo "Successfully downloaded artifacts!"
+        else
+          echo "Failed to download/locate artifacts!"
+          curl -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" -d "text=:red-siren: Periodic Job : Failed to download/locate artifacts" -d "channel=${SLACK_CHANNEL_ID}" -X POST https://slack.com/api/chat.postMessage
+        fi
+
+        gsutil -m -o "GSUtil:state_dir=/tmp" cp -r
+        "$OPENSHIFTCI_JOB_GS/$LATEST_BUILD_ID/artifacts/junit_operator.xml"
+        artifacts
+
+
+        curl -o rp_xml_update_and_zip.py $PY_XML_UPDATE_SCRIPT
+
+
+        zip_file=$(python3 rp_xml_update_and_zip.py /tmp/artifacts)
+
+        echo "Zip file location"
+        echo "$zip_file"
+
+
+        response=$(curl -k -X POST \
+          -H "Authorization: Bearer ${REPORTPORTAL_TOKEN}" \
+          -H "Content-Type: multipart/form-data" \
+          -F "file=@artifacts/periodic-job.zip" \
+          $DEV_CONSOLE_REPORT_IMPORT_URL)
+
+        if echo "$response" | grep -q "successfully imported"; then
+            echo "Success: $response"
+        else
+            echo "Error: $response"
+            failed=true
+        fi
+
+
+        if [ "$failed" = true ]; then
+          curl -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" -d "text=:red-siren: Periodic Job : Failed to upload report on report portal" -d "channel=${SLACK_CHANNEL_ID}" -X POST https://slack.com/api/chat.postMessage
+          exit 1
+        fi
+  workspaces:
+    - description: The folder where we write the results
+      mountPath: /results
+      name: results-temp
