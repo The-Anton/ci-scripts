@@ -1,0 +1,27 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: upload-artifacts-no-filter-triggertemplate
+spec:
+  params:
+    - description: The git repository url
+      name: gitrepositoryurl
+    - description: The git Pull number
+      name: gitpullnumber
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: upload-artifacts-pipeline-run-
+      spec:
+        params:
+          - name: url
+            value: $(tt.params.gitrepositoryurl)
+          - name: pullNumber
+            value: $(tt.params.gitpullnumber)
+        pipelineRef:
+          name: artifacts-pipeline
+        serviceAccountName: pipeline
+        workspaces:
+          - emptyDir: {}
+            name: my-workspace

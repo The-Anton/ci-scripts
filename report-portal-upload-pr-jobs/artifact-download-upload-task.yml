@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
-  name: artifacts-download-upload-task
+  name: artifacts-download-upload-pr-jobs-task
   namespace: devconsole-qe-upload
 spec:
   params:
@@ -17,42 +17,47 @@ spec:
           valueFrom:
             configMapKeyRef:
               key: openshiftcijob.latestbuild.filename
-              name: reportportal-upload-config-new
+              name: reportportal-pr-jobs-upload-config
         - name: OPENSHIFTCI_JOB_URL
           valueFrom:
             configMapKeyRef:
-              key: openshiftcijob.url
-              name: reportportal-upload-config-new
+              key: openshiftcijob.pr.url
+              name: reportportal-pr-jobs-upload-config
         - name: OPENSHIFTCI_JOB_GS
           valueFrom:
             configMapKeyRef:
-              key: openshiftcijob.gs
-              name: reportportal-upload-config-new
-        - name: ARTIFACTS_PATH
+              key: openshiftcijob.pr.gs
+              name: reportportal-pr-jobs-upload-config
+        - name: OPENSHIFTCI_JOB_ARTIFACTS_PATH
           valueFrom:
             configMapKeyRef:
               key: artifacts.path
-              name: reportportal-upload-config-new
+              name: reportportal-pr-jobs-upload-config
         - name: REPORTPORTAL_TOKEN
           valueFrom:
             secretKeyRef:
               key: token
-              name: reportportal-token
+              name: reportportal-upload-pr-jobs-token
         - name: PY_XML_UPDATE_SCRIPT
-          value: >-
-            https://raw.githubusercontent.com/redhat-hac-qe/ci-scripts/main/rp_xml_update_and_zip.py
+          valueFrom:
+            configMapKeyRef:
+              key: updatescript.url
+              name: reportportal-pr-jobs-upload-config
         - name: DEV_CONSOLE_REPORT_IMPORT_URL
-          value: >-
-            https://reportportal-openshift-dev-console.apps.ocp-c1.prod.psi.redhat.com/api/v1/console/launch/import
-        - name: JOB_URL
-          value: >-
-            https://gcsweb-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/origin-ci-test/logs/periodic-ci-openshift-release-master-nightly-4.14-console-aws
-        - name: OPENSHIFTCI_JOB_GS
-          value: >-
-            gs://origin-ci-test/logs/periodic-ci-openshift-release-master-nightly-4.14-console-aws
-        - name: OPENSHIFTCI_JOB_ARTIFACTS_PATH
-          value: >-
-            artifacts/console-aws/e2e-test/artifacts/gui_test_screenshots/junit_cypress*.xml
+          valueFrom:
+            configMapKeyRef:
+              key: reportportal.import.api.url
+              name: reportportal-pr-jobs-upload-config
+        - name: SLACK_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: reportportal-upload-pr-jobs-secret
+        - name: SLACK_CHANNEL_ID
+          valueFrom:
+            secretKeyRef:
+              key: channel.id
+              name: reportportal-upload-pr-jobs-secret
       image: 'registry.access.redhat.com/ubi9/ubi:latest'
       name: get-url
       resources: {}
@@ -81,7 +86,7 @@ spec:
 
         #Get latest build
 
-        LATEST_BUILD_ID=$(curl "$JOB_URL/latest-build.txt")
+        LATEST_BUILD_ID=$(curl "$JOB_URL/$LATEST_BUILD_FILENAME")
         echo "latest build id : $LATEST_BUILD_ID"
 
         GSUTIL_URL=$DOWNLOAD_URL$LATEST_BUILD$ARTIFACTS

@@ -1,0 +1,10 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: upload-artifacts-no-filter-pipelinebinding
+spec:
+  params:
+    - name: gitrepositoryurl
+      value: "$(body.data.repository_url)"
+    - name: gitpullnumber
+      value: "$(body.data.repository.pull_number)"

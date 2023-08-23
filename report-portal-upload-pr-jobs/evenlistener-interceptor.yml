@@ -1,0 +1,15 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: cel-eventlistener-no-filter
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - name: cel-trig
+      interceptors:
+        - ref:
+            name: "cel"
+      bindings:
+      - ref: upload-artifacts-no-filter-pipelinebinding
+      template:
+        ref: upload-artifacts-no-filter-triggertemplate
