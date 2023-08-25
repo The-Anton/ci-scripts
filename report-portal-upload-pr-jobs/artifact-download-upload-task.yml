@@ -31,7 +31,7 @@ spec:
         - name: OPENSHIFTCI_JOB_ARTIFACTS_PATH
           valueFrom:
             configMapKeyRef:
-              key: artifacts.path
+              key: openshiftcijob.pr.artifacts.path
               name: reportportal-pr-jobs-upload-config
         - name: REPORTPORTAL_TOKEN
           valueFrom:
