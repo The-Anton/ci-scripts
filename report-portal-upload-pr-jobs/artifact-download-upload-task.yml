@@ -37,7 +37,7 @@ spec:
           valueFrom:
             secretKeyRef:
               key: token
-              name: reportportal-upload-pr-jobs-token
+              name: reportportal-upload-pr-jobs-secret
         - name: PY_XML_UPDATE_SCRIPT
           valueFrom:
             configMapKeyRef:
@@ -59,7 +59,7 @@ spec:
               key: channel.id
               name: reportportal-upload-pr-jobs-secret
       image: 'registry.access.redhat.com/ubi9/ubi:latest'
-      name: get-url
+      name: dowload-upload-task
       resources: {}
       script: |
         #!/bin/sh
