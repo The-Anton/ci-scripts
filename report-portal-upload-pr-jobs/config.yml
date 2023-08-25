@@ -7,7 +7,7 @@ data:
   reportportal.url: 'https://reportportal-openshift-dev-console.apps.ocp-c1.prod.psi.redhat.com/'
   openshiftcijob.pr.gs: >-
     gs://origin-ci-test/pr-logs/pull/openshift_console/
-  openshiftcijob.pr.job: /pull-ci-openshift-console-master-e2e-gcp-console/  
+  openshiftcijob.pr.job.directory: /pull-ci-openshift-console-master-e2e-gcp-console/  
   openshiftcijob.pr.artifacts.path: /artifacts/e2e-gcp-console/test/artifacts/gui_test_screenshots/  
   openshiftcijob.pr.url: >-
     https://gcsweb-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/origin-ci-test/pr-logs/pull/openshift_console/

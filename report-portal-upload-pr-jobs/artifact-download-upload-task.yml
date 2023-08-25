@@ -28,6 +28,11 @@ spec:
             configMapKeyRef:
               key: openshiftcijob.pr.gs
               name: reportportal-pr-jobs-upload-config
+        - name: OPENSHIFTCI_JOB_DIRECTORY
+          valueFrom:
+            configMapKeyRef:
+              key: openshiftcijob.pr.job.directory
+              name: reportportal-pr-jobs-upload-config
         - name: OPENSHIFTCI_JOB_ARTIFACTS_PATH
           valueFrom:
             configMapKeyRef:
@@ -78,20 +83,35 @@ spec:
 
         #Get Download URL
 
-        DOWNLOAD_URL=$OPENSHIFTCI_JOB_GS$PR_NUMBER$OPENSHIFTCI_JOB_URL
+
+        DOWNLOAD_URL=$OPENSHIFTCI_JOB_GS$PR_NUMBER$OPENSHIFTCI_JOB_DIRECTORY
+
 
         echo Download URL:
 
+
         echo $DOWNLOAD_URL
+
 
         #Get latest build
 
-        LATEST_BUILD_ID=$(curl "$JOB_URL/$LATEST_BUILD_FILENAME")
+        BUILD_FILE_URL=$OPENSHIFTCI_JOB_URL$PR_NUMBER$OPENSHIFTCI_JOB_DIRECTORY$LATEST_BUILD_FILENAME
+
+        echo BUILD FILE Download URL:
+
+
+        echo $BUILD_FILE_URL 
+
+        LATEST_BUILD_ID=$(curl $BUILD_FILE_URL)
+
         echo "latest build id : $LATEST_BUILD_ID"
 
-        GSUTIL_URL=$DOWNLOAD_URL$LATEST_BUILD$ARTIFACTS
+
+        GSUTIL_URL=$DOWNLOAD_URL$PR_NUMBER$OPENSHIFTCI_JOB_ARTIFACTS_PATH$LATEST_BUILD_ID
+
 
         echo Download URL for gsutil:
+
         echo $GSUTIL_URL
 
         cd /tmp
@@ -100,7 +120,7 @@ spec:
         export CLOUDSDK_CONFIG=/tmp
 
         if (gsutil -m -o "GSUtil:state_dir=/tmp" cp -r
-        "$OPENSHIFTCI_JOB_GS/$LATEST_BUILD_ID/$OPENSHIFTCI_JOB_ARTIFACTS_PATH"
+        "$GSUTIL_URL"
         artifacts); then
           echo "Successfully downloaded artifacts!"
         else
@@ -109,7 +129,7 @@ spec:
         fi
 
         gsutil -m -o "GSUtil:state_dir=/tmp" cp -r
-        "$OPENSHIFTCI_JOB_GS/$LATEST_BUILD_ID/artifacts/junit_operator.xml"
+        "$OPENSHIFTCI_JOB_GS$LATEST_BUILD_ID/artifacts/junit_operator.xml"
         artifacts
 
 
