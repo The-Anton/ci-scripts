@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: example
+  namespace: devconsole-qe-upload
+spec:
+  schedule: '*/3 * * * *'
+  serviceAccountName: cronjob
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          volumes:
+          - name: shared-data
+            emptyDir: {}
+          containers:
+            - name: reportportal-upload-1
+              image: 'google/cloud-sdk:latest'
+              args:
+                - /bin/sh
+                - '-c'
+                - mkdir test-dir
+              volumeMounts:
+              - name: shared-data
+                mountPath: /tmp
+            - name: second-build-stage
+              image: registry.redhat.io/openshift4/ose-cli
+              args:
+                - /bin/sh
+                - '-c'
+                - ls
+              volumeMounts:
+              - name: shared-data
+                mountPath: /tmp
+          restartPolicy: OnFailure

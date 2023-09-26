@@ -1,0 +1,151 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: reportportal-upload
+  namespace: devconsole-qe-upload
+spec:
+  schedule: "*/3 * * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          volumes:
+          - name: shared-data
+            emptyDir: {}
+          restartPolicy: Never
+          containers:
+          - name: reportportal-upload
+            image: google/cloud-sdk:latest
+            volumeMounts:
+            - name: shared-data
+              mountPath: /tmp
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop: ["ALL"]
+            env:
+            - name: REPORTPORTAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: reportportal-token
+            - name: SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: slack-bot-token
+            - name: SLACK_CHANNEL_ID
+              value: "C05L479BFND"
+            - name: PY_XML_UPDATE_SCRIPT
+              value: https://raw.githubusercontent.com/The-Anton/ci-scripts/main/report-portal-upload-periodic-jobs/xml_update_and_zip.py
+            - name: DEV_CONSOLE_REPORT_IMPORT_URL
+              value: https://reportportal-openshift-dev-console.apps.ocp-c1.prod.psi.redhat.com/api/v1/console/launch/import
+            - name: JOB_URL
+              value: https://gcsweb-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/origin-ci-test/logs/periodic-ci-openshift-release-master-nightly-4.14-console-aws
+            - name: OPENSHIFTCI_JOB_GS
+              value: gs://origin-ci-test/logs/periodic-ci-openshift-release-master-nightly-4.14-console-aws
+            - name: OPENSHIFTCI_JOB_ARTIFACTS_PATH
+              value: artifacts/console-aws/e2e-test/artifacts/gui_test_screenshots/junit_cypress*.xml
+
+            command:
+                - /bin/sh
+                - '-c'
+                - >
+                  failed=false
+
+                  latest_build_ID=$(curl "$JOB_URL/latest-build.txt")
+
+                  echo "latest build id : $latest_build_ID"
+
+
+                  #Check if the timestamp of the last build is not older than 12
+                  hours.
+
+                  timestamp=$(curl -s "$JOB_URL/$latest_build_ID/started.json" |
+                  grep -oP '"timestamp":\K\d+')
+
+                  twelve_hours_ago=$(date -u -d '12 hours ago' +%s)
+
+
+                  if [ "$timestamp" -le "$twelve_hours_ago" ]; then
+                    echo "Skipping : Latest build is older than 12 hours"
+                    exit 0
+                  fi
+
+
+                  cd /tmp
+
+                  mkdir ./artifacts
+
+
+                  export CLOUDSDK_CONFIG=/tmp
+
+                  DOWN_RESPONSE=$(gsutil -m -o "GSUtil:state_dir=/tmp" \
+                   cp -r "$OPENSHIFTCI_JOB_GS/$latest_build_ID/$OPENSHIFTCI_JOB_ARTIFACTS_PATH" artifacts)
+
+
+                  if ( DOWN_RESPONSE ); then
+                    echo "Successfully downloaded artifacts!"
+                  else
+                    echo "Failed to download/locate artifacts!"
+                    curl -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" -d "text=:red-siren: Periodic Job : Failed to download/locate artifacts" -d "channel=${SLACK_CHANNEL_ID}" -X POST https://slack.com/api/chat.postMessage
+                  fi
+
+                  gsutil -m -o "GSUtil:state_dir=/tmp" cp -r
+                  "$OPENSHIFTCI_JOB_GS/$latest_build_ID/artifacts/junit_operator.xml"
+                  artifacts
+
+
+                  ls artifacts
+
+                  curl -o rp_xml_update_and_zip.py $PY_XML_UPDATE_SCRIPT
+
+
+                  zip_file=$(python3 rp_xml_update_and_zip.py /tmp/artifacts)
+
+                  echo "Zip file location" echo "$zip_file"
+
+
+                  response=$(curl -k -X POST \
+                    -H "Authorization: Bearer ${REPORTPORTAL_TOKEN}" \
+                    -H "Content-Type: multipart/form-data" \
+                    -F "file=@artifacts/periodic-job.zip" \
+                    $DEV_CONSOLE_REPORT_IMPORT_URL)
+
+                  if echo "$response" | grep -q "successfully imported"; then
+                      echo "Success: $response"
+                      echo "success" > attempt_status.txt
+
+                  else
+                      echo "Error: $response"
+                      failed=true
+                      echo "failure" > attempt_status.txt
+                  fi
+
+
+                  if [ "$failed" = true ]; then
+                    curl -H "Authorization: Bearer ${SLACK_BOT_TOKEN}" -d "text=:red-siren: Periodic Job : Failed to upload report on report portal" -d "channel=${SLACK_CHANNEL_ID}" -X POST https://slack.com/api/chat.postMessage
+                    exit 1
+                  fi
+          - name: hello
+            image: registry.redhat.io/openshift4/ose-cli
+            volumeMounts:
+              - name: shared-data
+                mountPath: /tmp
+            command:
+                - /bin/sh
+                - '-c'
+                - >
+                  ls
+
+                  status = "$(cat attempt_status.txt)"
+
+                  if status == "success"; then
+                    oc patch reportportal-pr-jobs-upload-config -p "{\"data\":{\"last_attempt_status\":\"success\"}}"
+                  else 
+                    oc patch reportportal-pr-jobs-upload-config -p "{\"data\":{\"last_attempt_status\":\"failure\"}}"
+
