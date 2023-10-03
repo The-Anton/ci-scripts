@@ -18,7 +18,7 @@ def update_xml_file(xml_file):
     tree.write(xml_file, encoding='utf-8', xml_declaration=True)
 
 
-def create_zip_file(directory):
+def create_zip_file(directory, build_id):
     # Get all the xml files starting with "junit"
     xml_files = [os.path.join(directory, filename) for filename in os.listdir(directory) if filename.startswith('junit')]
 
@@ -26,8 +26,9 @@ def create_zip_file(directory):
     for xml_file in xml_files:
         update_xml_file(xml_file)
 
+    file_name = build_id + 'pr-job.zip'
     # Create a zip file and add the updated XML files
-    zip_file = os.path.join(directory, 'pr-job.zip')
+    zip_file = os.path.join(directory, file_name)
     with zipfile.ZipFile(zip_file, 'w') as zipf:
         for modified_file in xml_files:
             zipf.write(modified_file, os.path.basename(modified_file))
@@ -37,6 +38,7 @@ def create_zip_file(directory):
 
 # Directory path containing junit xml files
 directory = sys.argv[1]
+build_id = sys.argv[2]
 
-zip_file = create_zip_file(directory)
+zip_file = create_zip_file(directory, build_id)
 print(zip_file)
