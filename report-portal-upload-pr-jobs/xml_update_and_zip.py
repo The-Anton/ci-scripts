@@ -26,7 +26,7 @@ def create_zip_file(directory, build_id):
     for xml_file in xml_files:
         update_xml_file(xml_file)
 
-    file_name = build_id + 'pr-job.zip'
+    file_name =  'pr-job-' + build_id + '.zip'
     # Create a zip file and add the updated XML files
     zip_file = os.path.join(directory, file_name)
     with zipfile.ZipFile(zip_file, 'w') as zipf:
